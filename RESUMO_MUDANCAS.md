@@ -101,10 +101,17 @@
 
 ## 📝 Notas Importantes
 
-- A migração do banco de dados será aplicada automaticamente
+- **A migração do banco de dados é aplicada automaticamente na inicialização da aplicação**
+- Se houver erro de "no such column", basta reiniciar a aplicação
 - Obras antigas (séries/filmes) ainda estarão no banco mas não aparecerão nos filtros
 - Arquivos são salvos em `/app/static/uploads/obras/`
 - Autenticação é necessária para todas as operações
+
+## 🔧 Migração do Banco de Dados
+
+A migração é **100% automática**. O arquivo `app/__init__.py` foi modificado para executar `app/migrate_on_startup.py` que adiciona as colunas necessárias na primeira inicialização.
+
+Consulte `MIGRACAO.md` para mais detalhes sobre a migração.
 
 ## 🎉 Resultado Final
 
