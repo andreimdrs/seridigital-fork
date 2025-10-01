@@ -89,6 +89,37 @@ def criar_comunidade():
 
     return render_template('criar_comunidade.html')
 
+@comunidade_bp.route('/delete/<int:community_id>', methods=['POST'])
+@login_required
+def delete_community(community_id):
+    """Deleta uma comunidade (apenas o criador)"""
+    comunidade = Community.query.get_or_404(community_id)
+    
+    # Verificar se o usuário atual é o dono da comunidade
+    if comunidade.owner_id != current_user.id:
+        flash('Acesso negado. Apenas o criador da comunidade pode apagá-la.', 'error')
+        return redirect(url_for('comunidade.comunidade'))
+    
+    community_name = comunidade.name
+    
+    try:
+        # Deletar todos os posts relacionados (e seus likes/comentários serão deletados em cascata)
+        CommunityPost.query.filter_by(community_id=community_id).delete()
+        
+        # Deletar todos os bloqueios relacionados à comunidade
+        CommunityBlock.query.filter_by(community_id=community_id).delete()
+        
+        # Deletar a comunidade
+        db.session.delete(comunidade)
+        db.session.commit()
+        
+        flash(f'Comunidade "{community_name}" foi apagada com sucesso.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao apagar comunidade: {str(e)}', 'error')
+    
+    return redirect(url_for('comunidade.comunidade'))
+
 # Novas rotas para bloqueio e filtragem
 @comunidade_bp.route('/block/<int:community_id>', methods=['POST'])
 @login_required
