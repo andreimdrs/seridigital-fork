@@ -24,13 +24,20 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-4">
-                            {% if content.thumbnail %}
-                                <img src="{{ content.thumbnail }}" class="img-fluid rounded" alt="{{ content.title }}">
-                            {% else %}
-                                <div class="bg-light d-flex align-items-center justify-content-center rounded" style="height: 300px;">
-                                    <i class="fas fa-play-circle fa-5x text-muted"></i>
-                                </div>
-                            {% endif %}
+                            <div id="video-container" class="position-relative">
+                                {% if content.thumbnail %}
+                                    <img id="video-thumb" src="{{ content.thumbnail }}" class="img-fluid rounded w-100" alt="{{ content.title }}">
+                                    {% if yt_id %}
+                                        <button id="btn-play" type="button" class="btn btn-success position-absolute top-50 start-50 translate-middle rounded-circle" aria-label="Assistir" style="width:64px;height:64px;">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                    {% endif %}
+                                {% else %}
+                                    <div class="bg-light d-flex align-items-center justify-content-center rounded" style="height: 300px;">
+                                        <i class="fas fa-play-circle fa-5x text-muted"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
                         </div>
                         
                         <div class="col-md-8">
@@ -48,9 +55,15 @@
                             
                             {% if content.url %}
                                 <div class="mb-3">
-                                    <a href="{{ content.url }}" target="_blank" class="btn btn-success">
-                                        <i class="fas fa-external-link-alt"></i> Assistir
-                                    </a>
+                                    {% if yt_id %}
+                                        <button id="btn-assistir" type="button" class="btn btn-success">
+                                            <i class="fas fa-play"></i> Assistir
+                                        </button>
+                                    {% else %}
+                                        <a href="{{ content.url }}" target="_blank" class="btn btn-success">
+                                            <i class="fas fa-external-link-alt"></i> Assistir
+                                        </a>
+                                    {% endif %}
                                 </div>
                             {% endif %}
                             
@@ -81,4 +94,31 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+{% endblock %}
+
+{% block extra_js %}
+{% if yt_id %}
+<script>
+    (function(){
+        const container = document.getElementById('video-container');
+        const btnPlay = document.getElementById('btn-play');
+        const btnAssistir = document.getElementById('btn-assistir');
+        function playInline(){
+            if (!container) return;
+            const iframe = document.createElement('iframe');
+            iframe.width = '100%';
+            iframe.height = '315';
+            iframe.src = 'https://www.youtube.com/embed/{{ yt_id }}?autoplay=1&rel=0&modestbranding=1';
+            iframe.title = 'YouTube video player';
+            iframe.frameBorder = '0';
+            iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+            iframe.allowFullscreen = true;
+            container.innerHTML = '';
+            container.appendChild(iframe);
+        }
+        if (btnPlay) btnPlay.addEventListener('click', playInline);
+        if (btnAssistir) btnAssistir.addEventListener('click', playInline);
+    })();
+</script>
+{% endif %}
 {% endblock %}

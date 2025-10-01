@@ -2,6 +2,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from ..models import Content, db
+from ..utils.helpers import extract_youtube_id, youtube_thumbnail_url
 import os
 from werkzeug.utils import secure_filename
 
@@ -32,7 +33,8 @@ def buscar_obra():
 def view_content(content_id):
     """Visualiza um conteúdo específico"""
     content = Content.query.get_or_404(content_id)
-    return render_template('content/view.html', content=content)
+    yt_id = extract_youtube_id(content.url) if content.url else None
+    return render_template('content/view.html', content=content, yt_id=yt_id)
 
 @content_bp.route('/create', methods=['GET', 'POST'])
 @login_required
@@ -58,6 +60,12 @@ def create_content():
         if release_date and not release_date_obj:
             return render_template('content/create.html')
         
+        # Se URL for do YouTube e thumbnail não foi informado, gera automaticamente
+        if url and not thumbnail:
+            yt_id = extract_youtube_id(url)
+            if yt_id:
+                thumbnail = youtube_thumbnail_url(yt_id, quality="hqdefault")
+
         new_content = Content(
             title=title,
             description=description,
@@ -91,7 +99,14 @@ def edit_content(content_id):
             return render_template('content/edit.html', content=content)
         content.type = content_type
         content.url = request.form.get('url')
-        content.thumbnail = request.form.get('thumbnail')
+        # Se URL for do YouTube e thumbnail não foi informado ou está vazio, gera automaticamente
+        posted_thumbnail = request.form.get('thumbnail')
+        if posted_thumbnail:
+            content.thumbnail = posted_thumbnail
+        else:
+            yt_id = extract_youtube_id(content.url)
+            if yt_id:
+                content.thumbnail = youtube_thumbnail_url(yt_id, quality="hqdefault")
         
         # Atualizar data de lançamento se fornecida
         release_date = request.form.get('release_date')
