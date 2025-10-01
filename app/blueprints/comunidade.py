@@ -13,6 +13,20 @@ def comunidade():
     comunidades = current_user.get_accessible_communities(include_filtered=include_filtered)
     return render_template('lista_comunidades.html', comunidades=comunidades)
 
+@comunidade_bp.route('/oficial', methods=['GET'])
+@login_required
+def comunidade_oficial():
+    """Redireciona diretamente para a comunidade oficial SeriDigital"""
+    # Buscar comunidade oficial
+    comunidade_oficial = Community.query.filter_by(name='SeriDigital').first()
+    
+    if not comunidade_oficial:
+        flash('Comunidade oficial não encontrada.', 'error')
+        return redirect(url_for('comunidade.comunidade'))
+    
+    # Redirecionar para a comunidade
+    return redirect(url_for('comunidade.comunidade_users', community_id=comunidade_oficial.id))
+
 @comunidade_bp.route('/<int:community_id>', methods=['GET', 'POST'])
 @login_required
 def comunidade_users(community_id):
