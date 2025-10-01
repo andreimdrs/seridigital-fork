@@ -41,6 +41,9 @@
                                 <label for="url" class="form-label">URL do Conteúdo</label>
                                 <input type="url" class="form-control" id="url" name="url" placeholder="https://www.youtube.com/watch?v=...">
                                 <div class="form-text">Se for um link do YouTube, a capa será preenchida automaticamente.</div>
+                                <div id="thumb_preview" class="mt-2 d-none">
+                                    <img id="thumb_img" src="" alt="Prévia da capa" class="img-fluid rounded">
+                                </div>
                             </div>
                         </div>
                         
@@ -61,4 +64,42 @@
         </div>
     </div>
 </div>
+{% endblock %}
+{% block extra_js %}
+<script>
+    (function(){
+        const input = document.getElementById('url');
+        const preview = document.getElementById('thumb_preview');
+        const img = document.getElementById('thumb_img');
+
+        function extractId(u){
+            if(!u) return null;
+            const patterns = [
+                /[?&]v=([a-zA-Z0-9_-]{11})/,
+                /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+                /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+                /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
+            ];
+            for (const p of patterns){
+                const m = u.match(p);
+                if (m) return m[1];
+            }
+            return null;
+        }
+
+        function onChange(){
+            const id = extractId(input.value);
+            if (id){
+                img.src = `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+                preview.classList.remove('d-none');
+            } else {
+                preview.classList.add('d-none');
+                img.removeAttribute('src');
+            }
+        }
+
+        input.addEventListener('input', onChange);
+        input.addEventListener('change', onChange);
+    })();
+</script>
 {% endblock %}

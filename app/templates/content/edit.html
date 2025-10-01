@@ -65,18 +65,46 @@
 
 {% block extra_js %}
 <script>
-document.getElementById('btn_upload_image').addEventListener('click', async function() {
-    const fileInput = document.getElementById('local_image');
-    if (!fileInput.files || !fileInput.files[0]) { return; }
-    const formData = new FormData();
-    formData.append('image', fileInput.files[0]);
-    const res = await fetch("{{ url_for('content.upload_image') }}", { method: 'POST', body: formData });
-    const data = await res.json();
-    if (data.success) {
-        document.getElementById('thumbnail').value = data.url;
-    } else {
-        alert(data.message || 'Falha ao enviar imagem');
-    }
-});
+    (function(){
+        const input = document.getElementById('url');
+        const existing = '{{ content.thumbnail or '' }}';
+        let preview = document.getElementById('thumb_preview');
+        if (!preview){
+            const row = input.closest('.mb-3');
+            preview = document.createElement('div');
+            preview.id = 'thumb_preview';
+            preview.className = 'mt-2' + (existing ? '' : ' d-none');
+            preview.innerHTML = '<img id="thumb_img" class="img-fluid rounded" alt="Prévia da capa" ' + (existing ? `src="${existing}"` : '') + ' />';
+            row.appendChild(preview);
+        }
+        const img = document.getElementById('thumb_img');
+
+        function extractId(u){
+            if(!u) return null;
+            const patterns = [
+                /[?&]v=([a-zA-Z0-9_-]{11})/,
+                /youtu\.be\/([a-zA-Z0-9_-]{11})/,
+                /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,
+                /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
+            ];
+            for (const p of patterns){
+                const m = u.match(p);
+                if (m) return m[1];
+            }
+            return null;
+        }
+        function onChange(){
+            const id = extractId(input.value);
+            if (id){
+                img.src = `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+                preview.classList.remove('d-none');
+            } else if (!existing){
+                preview.classList.add('d-none');
+                img.removeAttribute('src');
+            }
+        }
+        input.addEventListener('input', onChange);
+        input.addEventListener('change', onChange);
+    })();
 </script>
 {% endblock %}
