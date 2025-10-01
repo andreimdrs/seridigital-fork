@@ -60,51 +60,67 @@ def view_content(content_id):
 @content_bp.route('/create', methods=['GET', 'POST'])
 @login_required
 def create_content():
-    """Cria novo conteúdo"""
+    """Cria nova obra (livro ou manifesto)"""
     if request.method == 'POST':
         title = request.form.get('title')
         description = request.form.get('description')
         content_type = request.form.get('type')
-        url = request.form.get('url')
         thumbnail = request.form.get('thumbnail')
         release_date = request.form.get('release_date')
         
         # Validação de tipos permitidos
-        allowed_types = ['serie', 'filme', 'documentario', 'anime', 'novela']
+        allowed_types = ['livro', 'manifesto']
         if content_type not in allowed_types:
-            flash('Tipo de conteúdo inválido. Selecione um tipo válido.', 'danger')
+            flash('Tipo de obra inválido. Selecione um tipo válido.', 'danger')
             return render_template('content/create.html')
+
+        # Processar upload do arquivo
+        file = request.files.get('file')
+        if not file or file.filename == '':
+            flash('Por favor, anexe um arquivo PDF ou EPUB.', 'danger')
+            return render_template('content/create.html')
+        
+        # Validar extensão do arquivo
+        filename = secure_filename(file.filename)
+        file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+        
+        if file_ext not in ['pdf', 'epub']:
+            flash('Apenas arquivos PDF e EPUB são permitidos.', 'danger')
+            return render_template('content/create.html')
+        
+        # Criar diretório de uploads se não existir
+        upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'uploads', 'obras')
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # Gerar nome único para o arquivo
+        import uuid
+        unique_filename = f"{uuid.uuid4().hex}_{filename}"
+        file_path = os.path.join(upload_dir, unique_filename)
+        file.save(file_path)
+        
+        # Salvar caminho relativo no banco
+        relative_path = f"uploads/obras/{unique_filename}"
 
         # Converte a data se fornecida
         from ..utils.helpers import parse_date
         release_date_obj = parse_date(release_date)
         if release_date and not release_date_obj:
             return render_template('content/create.html')
-        
-        # Auto-gerar thumbnail do YouTube quando aplicável
-        final_thumbnail = thumbnail
-        if url and not final_thumbnail:
-            try:
-                from ..utils.helpers import extract_youtube_id, youtube_thumbnail_url
-                video_id = extract_youtube_id(url)
-                if video_id:
-                    final_thumbnail = youtube_thumbnail_url(video_id, 'hqdefault')
-            except Exception:
-                pass
 
         new_content = Content(
             title=title,
             description=description,
             type=content_type,
-            url=url,
-            thumbnail=final_thumbnail,
-            release_date=release_date_obj
+            thumbnail=thumbnail,
+            release_date=release_date_obj,
+            file_path=relative_path,
+            file_type=file_ext
         )
         
         db.session.add(new_content)
         db.session.commit()
         
-        flash('Conteúdo criado com sucesso!', 'success')
+        flash('Obra criada com sucesso!', 'success')
         return redirect(url_for('content.list_content'))
     
     return render_template('content/create.html')
@@ -112,40 +128,60 @@ def create_content():
 @content_bp.route('/<int:content_id>/edit', methods=['GET', 'POST'])
 @login_required
 def edit_content(content_id):
-    """Edita um conteúdo"""
+    """Edita uma obra"""
     content = Content.query.get_or_404(content_id)
     
     if request.method == 'POST':
         content.title = request.form.get('title')
         content.description = request.form.get('description')
         content_type = request.form.get('type')
-        allowed_types = ['serie', 'filme', 'documentario', 'anime', 'novela']
+        allowed_types = ['livro', 'manifesto']
         if content_type not in allowed_types:
-            flash('Tipo de conteúdo inválido. Selecione um tipo válido.', 'danger')
+            flash('Tipo de obra inválido. Selecione um tipo válido.', 'danger')
             return render_template('content/edit.html', content=content)
         content.type = content_type
-        new_url = request.form.get('url')
+        
+        # Processar novo arquivo se enviado
+        file = request.files.get('file')
+        if file and file.filename != '':
+            # Validar extensão do arquivo
+            filename = secure_filename(file.filename)
+            file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+            
+            if file_ext not in ['pdf', 'epub']:
+                flash('Apenas arquivos PDF e EPUB são permitidos.', 'danger')
+                return render_template('content/edit.html', content=content)
+            
+            # Deletar arquivo antigo se existir
+            if content.file_path:
+                old_file_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', content.file_path)
+                if os.path.exists(old_file_path):
+                    os.remove(old_file_path)
+            
+            # Salvar novo arquivo
+            upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'uploads', 'obras')
+            os.makedirs(upload_dir, exist_ok=True)
+            
+            import uuid
+            unique_filename = f"{uuid.uuid4().hex}_{filename}"
+            file_path = os.path.join(upload_dir, unique_filename)
+            file.save(file_path)
+            
+            content.file_path = f"uploads/obras/{unique_filename}"
+            content.file_type = file_ext
+        
+        # Atualizar thumbnail
         new_thumbnail = request.form.get('thumbnail')
-        content.url = new_url
-        # Auto-preencher thumbnail se vazio e URL for do YouTube
-        if not new_thumbnail and new_url:
-            try:
-                from ..utils.helpers import extract_youtube_id, youtube_thumbnail_url
-                video_id = extract_youtube_id(new_url)
-                if video_id:
-                    new_thumbnail = youtube_thumbnail_url(video_id, 'hqdefault')
-            except Exception:
-                pass
         content.thumbnail = new_thumbnail
         
-        # Atualizar data de lançamento se fornecida
+        # Atualizar data de publicação
         release_date = request.form.get('release_date')
         if release_date:
             from ..utils.helpers import parse_date
             content.release_date = parse_date(release_date)
         
         db.session.commit()
-        flash('Conteúdo atualizado com sucesso!', 'success')
+        flash('Obra atualizada com sucesso!', 'success')
         return redirect(url_for('content.view_content', content_id=content_id))
     
     return render_template('content/edit.html', content=content)
@@ -177,11 +213,36 @@ def delete_content(content_id):
     content = Content.query.get_or_404(content_id)
     
     try:
+        # Deletar arquivo físico se existir
+        if content.file_path:
+            file_full_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', content.file_path)
+            if os.path.exists(file_full_path):
+                os.remove(file_full_path)
+        
         db.session.delete(content)
         db.session.commit()
-        flash('Conteúdo deletado com sucesso!', 'success')
+        flash('Obra deletada com sucesso!', 'success')
     except Exception as e:
         db.session.rollback()
-        flash(f'Erro ao deletar conteúdo: {str(e)}', 'danger')
+        flash(f'Erro ao deletar obra: {str(e)}', 'danger')
     
     return redirect(url_for('content.list_content'))
+
+@content_bp.route('/<int:content_id>/download')
+@login_required
+def download_content(content_id):
+    """Faz download do arquivo da obra"""
+    from flask import send_file
+    content = Content.query.get_or_404(content_id)
+    
+    if not content.file_path:
+        flash('Esta obra não possui arquivo disponível para download.', 'danger')
+        return redirect(url_for('content.view_content', content_id=content_id))
+    
+    file_full_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', content.file_path)
+    
+    if not os.path.exists(file_full_path):
+        flash('Arquivo não encontrado.', 'danger')
+        return redirect(url_for('content.view_content', content_id=content_id))
+    
+    return send_file(file_full_path, as_attachment=True, download_name=f"{content.title}.{content.file_type}")
