@@ -514,3 +514,46 @@ h1, h2, h3, h4, h5, h6 {
 ::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(135deg, var(--color-primary-700) 0%, var(--color-primary-600) 100%);
 }
+
+/* --- Thumbnail play overlay --- */
+.thumbnail-overlay-link {
+	display: block;
+	position: relative;
+}
+
+.thumbnail-overlay-link img {
+	display: block;
+	width: 100%;
+	height: auto;
+}
+
+.thumbnail-play-overlay {
+	position: absolute;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(0, 0, 0, 0.15);
+	transition: background 0.2s ease;
+	pointer-events: none; /* allow clicking through to the link */
+}
+
+.thumbnail-play-overlay i {
+	/* Ensure the icon is centered without extra spacing and sized prominently */
+	margin-right: 0;
+	font-size: clamp(48px, 12vw, 96px);
+	color: rgba(255, 255, 255, 0.95);
+	text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+	transition: transform 0.2s ease;
+}
+
+.thumbnail-overlay-link:hover .thumbnail-play-overlay {
+	background: rgba(0, 0, 0, 0.25);
+}
+
+.thumbnail-overlay-link:hover .thumbnail-play-overlay i {
+	transform: scale(1.06);
+}
