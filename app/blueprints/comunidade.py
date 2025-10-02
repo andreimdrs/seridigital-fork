@@ -259,10 +259,10 @@ def delete_post(community_id, post_id):
     
     try:
         # Deletar comentários associados
-        CommunityComment.query.filter_by(post_id=post_id).delete()
+        CommunityPostComment.query.filter_by(post_id=post_id).delete()
         
         # Deletar likes associados
-        CommunityLike.query.filter_by(post_id=post_id).delete()
+        CommunityPostLike.query.filter_by(post_id=post_id).delete()
         
         # Deletar o post
         db.session.delete(post)
@@ -286,7 +286,7 @@ def delete_comment(comment_id):
     """Excluir comentário de um post"""
     from flask import jsonify
     
-    comentario = CommunityComment.query.get_or_404(comment_id)
+    comentario = CommunityPostComment.query.get_or_404(comment_id)
     post_id = comentario.post_id
     post = CommunityPost.query.get(post_id)
     comunidade = Community.query.get(post.community_id) if post else None
@@ -303,7 +303,7 @@ def delete_comment(comment_id):
         db.session.commit()
         
         # Contar comentários restantes
-        comments_count = CommunityComment.query.filter_by(post_id=post_id).count()
+        comments_count = CommunityPostComment.query.filter_by(post_id=post_id).count()
         
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({'success': True, 'message': 'Comentário excluído', 'comments_count': comments_count})
