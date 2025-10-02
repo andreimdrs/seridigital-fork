@@ -1,7 +1,7 @@
 # app/blueprints/content.py
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
-from ..models import Content, db
+from ..models import Content, Rating, db
 import os
 from werkzeug.utils import secure_filename
 
@@ -43,7 +43,24 @@ def buscar_obra():
 @content_bp.route('/<int:content_id>')
 def view_content(content_id):
     """Visualiza um conteúdo específico"""
+    from sqlalchemy import func
     content = Content.query.get_or_404(content_id)
+    
+    # Buscar todas as avaliações
+    ratings = Rating.query.filter_by(content_id=content_id).order_by(Rating.created_at.desc()).all()
+    
+    # Calcular média das avaliações
+    avg_rating = db.session.query(func.avg(Rating.rating)).filter_by(content_id=content_id).scalar()
+    total_ratings = len(ratings)
+    
+    # Buscar avaliação do usuário atual se estiver logado
+    user_rating = None
+    if current_user.is_authenticated:
+        user_rating = Rating.query.filter_by(
+            user_id=current_user.id,
+            content_id=content_id
+        ).first()
+    
     from ..utils.helpers import (
         extract_youtube_id,
         youtube_thumbnail_url,
@@ -52,6 +69,10 @@ def view_content(content_id):
     return render_template(
         'content/view.html',
         content=content,
+        ratings=ratings,
+        avg_rating=avg_rating,
+        total_ratings=total_ratings,
+        user_rating=user_rating,
         extract_youtube_id=extract_youtube_id,
         youtube_thumbnail_url=youtube_thumbnail_url,
         youtube_embed_url=youtube_embed_url,
@@ -274,3 +295,67 @@ def download_content(content_id):
         return redirect(url_for('content.view_content', content_id=content_id))
     
     return send_file(file_full_path, as_attachment=True, download_name=f"{content.title}.{content.file_type}")
+@content_bp.route('/<int:content_id>/rating', methods=['POST'])
+@login_required
+def add_rating(content_id):
+    """Adiciona ou atualiza avaliação de uma obra"""
+    content = Content.query.get_or_404(content_id)
+    
+    rating_value = request.form.get('rating', type=int)
+    review_text = request.form.get('review', '').strip()
+    
+    if not rating_value or rating_value < 1 or rating_value > 5:
+        flash('Avaliação inválida. Selecione de 1 a 5 estrelas.', 'danger')
+        return redirect(url_for('content.view_content', content_id=content_id))
+    
+    # Verificar se usuário já avaliou
+    existing_rating = Rating.query.filter_by(
+        user_id=current_user.id,
+        content_id=content_id
+    ).first()
+    
+    try:
+        if existing_rating:
+            # Atualizar avaliação existente
+            existing_rating.rating = rating_value
+            existing_rating.review = review_text if review_text else None
+            flash('Sua avaliação foi atualizada!', 'success')
+        else:
+            # Criar nova avaliação
+            new_rating = Rating(
+                user_id=current_user.id,
+                content_id=content_id,
+                rating=rating_value,
+                review=review_text if review_text else None
+            )
+            db.session.add(new_rating)
+            flash('Avaliação enviada com sucesso!', 'success')
+        
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao salvar avaliação: {str(e)}', 'danger')
+    
+    return redirect(url_for('content.view_content', content_id=content_id))
+
+@content_bp.route('/rating/<int:rating_id>/delete', methods=['POST'])
+@login_required
+def delete_rating(rating_id):
+    """Deleta uma avaliação"""
+    rating = Rating.query.get_or_404(rating_id)
+    content_id = rating.content_id
+    
+    # Verificar permissão (apenas o autor ou admin pode deletar)
+    if current_user.id != rating.user_id and not current_user.is_admin:
+        flash('Você não tem permissão para excluir esta avaliação.', 'danger')
+        return redirect(url_for('content.view_content', content_id=content_id))
+    
+    try:
+        db.session.delete(rating)
+        db.session.commit()
+        flash('Avaliação excluída com sucesso!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao excluir avaliação: {str(e)}', 'danger')
+    
+    return redirect(url_for('content.view_content', content_id=content_id))
