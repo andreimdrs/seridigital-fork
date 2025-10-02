@@ -30,7 +30,7 @@ def profile(user_id):
     
     # Posts em comunidades recentes
     recent_posts = CommunityPost.query.filter(
-        CommunityPost.user_id == user_id,
+        CommunityPost.author_id == user_id,
         CommunityPost.created_at >= thirty_days_ago
     ).order_by(desc(CommunityPost.created_at)).limit(5).all()
     
