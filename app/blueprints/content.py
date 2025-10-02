@@ -75,32 +75,47 @@ def create_content():
             flash('Tipo de obra inválido. Selecione um tipo válido.', 'danger')
             return render_template('content/create.html')
 
-        # Processar upload do arquivo
+        # Validar: arquivo OU URL do YouTube é obrigatório
+        has_file = request.files.get('file') and request.files.get('file').filename != ''
+        has_youtube_url = url and url.strip() != ''
+        
+        if not has_file and not has_youtube_url:
+            flash('É obrigatório fornecer um arquivo (PDF/EPUB) ou um link do YouTube.', 'danger')
+            return render_template('content/create.html')
+        
+        # Processar upload do arquivo (se fornecido)
+        relative_path = None
+        file_ext = None
+        
         file = request.files.get('file')
-        if not file or file.filename == '':
-            flash('Por favor, anexe um arquivo PDF ou EPUB.', 'danger')
-            return render_template('content/create.html')
+        if file and file.filename != '':
+            # Validar extensão do arquivo
+            filename = secure_filename(file.filename)
+            file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+            
+            if file_ext not in ['pdf', 'epub']:
+                flash('Apenas arquivos PDF e EPUB são permitidos.', 'danger')
+                return render_template('content/create.html')
+            
+            # Criar diretório de uploads se não existir
+            upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'uploads', 'obras')
+            os.makedirs(upload_dir, exist_ok=True)
+            
+            # Gerar nome único para o arquivo
+            import uuid
+            unique_filename = f"{uuid.uuid4().hex}_{filename}"
+            file_path = os.path.join(upload_dir, unique_filename)
+            file.save(file_path)
+            
+            # Salvar caminho relativo no banco
+            relative_path = f"uploads/obras/{unique_filename}"
         
-        # Validar extensão do arquivo
-        filename = secure_filename(file.filename)
-        file_ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
-        
-        if file_ext not in ['pdf', 'epub']:
-            flash('Apenas arquivos PDF e EPUB são permitidos.', 'danger')
-            return render_template('content/create.html')
-        
-        # Criar diretório de uploads se não existir
-        upload_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static', 'uploads', 'obras')
-        os.makedirs(upload_dir, exist_ok=True)
-        
-        # Gerar nome único para o arquivo
-        import uuid
-        unique_filename = f"{uuid.uuid4().hex}_{filename}"
-        file_path = os.path.join(upload_dir, unique_filename)
-        file.save(file_path)
-        
-        # Salvar caminho relativo no banco
-        relative_path = f"uploads/obras/{unique_filename}"
+        # Gerar thumbnail do YouTube automaticamente se não houver thumbnail manual
+        if not thumbnail and url:
+            from ..utils.helpers import extract_youtube_id, youtube_thumbnail_url
+            video_id = extract_youtube_id(url)
+            if video_id:
+                thumbnail = youtube_thumbnail_url(video_id, quality='maxresdefault')
 
         # Converte a data se fornecida
         from ..utils.helpers import parse_date
@@ -179,6 +194,13 @@ def edit_content(content_id):
         # Atualizar thumbnail
         new_thumbnail = request.form.get('thumbnail')
         content.thumbnail = new_thumbnail
+        
+        # Gerar thumbnail do YouTube automaticamente se não houver thumbnail manual
+        if not new_thumbnail and new_url:
+            from ..utils.helpers import extract_youtube_id, youtube_thumbnail_url
+            video_id = extract_youtube_id(new_url)
+            if video_id:
+                content.thumbnail = youtube_thumbnail_url(video_id, quality='maxresdefault')
         
         # Atualizar data de publicação
         release_date = request.form.get('release_date')
