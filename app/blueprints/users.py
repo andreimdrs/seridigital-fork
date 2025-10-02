@@ -51,51 +51,55 @@ def profile(user_id):
     
     # Adicionar avaliações
     for rating in recent_ratings:
-        activities.append({
-            'type': 'rating',
-            'icon': 'fas fa-star',
-            'color': 'warning',
-            'title': f'Avaliou "{rating.content.title}"',
-            'description': f'{rating.rating} estrelas' + (f' - "{rating.review}"' if rating.review else ''),
-            'date': rating.created_at,
-            'url': url_for('content.view_content', content_id=rating.content_id)
-        })
+        if rating.content:  # Verificar se o conteúdo existe
+            activities.append({
+                'type': 'rating',
+                'icon': 'fas fa-star',
+                'color': 'warning',
+                'title': f'Avaliou "{rating.content.title}"',
+                'description': f'{rating.rating} estrelas' + (f' - "{rating.review}"' if rating.review else ''),
+                'date': rating.created_at,
+                'url': url_for('content.view_content', content_id=rating.content_id)
+            })
     
     # Adicionar posts
     for post in recent_posts:
-        activities.append({
-            'type': 'post',
-            'icon': 'fas fa-comment',
-            'color': 'primary',
-            'title': f'Postou em "{post.comunidade.name}"',
-            'description': post.content[:100] + ('...' if len(post.content) > 100 else ''),
-            'date': post.created_at,
-            'url': url_for('comunidade.comunidade_users', community_id=post.community_id)
-        })
+        if post.comunidade:  # Verificar se a comunidade existe
+            activities.append({
+                'type': 'post',
+                'icon': 'fas fa-comment',
+                'color': 'primary',
+                'title': f'Postou em "{post.comunidade.name}"',
+                'description': post.content[:100] + ('...' if len(post.content) > 100 else ''),
+                'date': post.created_at,
+                'url': url_for('comunidade.comunidade_users', community_id=post.community_id)
+            })
     
     # Adicionar comentários
     for comment in recent_comments:
-        activities.append({
-            'type': 'comment',
-            'icon': 'fas fa-reply',
-            'color': 'info',
-            'title': f'Comentou em "{comment.post.comunidade.name}"',
-            'description': comment.text[:100] + ('...' if len(comment.text) > 100 else ''),
-            'date': comment.created_at,
-            'url': url_for('comunidade.comunidade_users', community_id=comment.post.community_id)
-        })
+        if comment.post and comment.post.comunidade:  # Verificar se o post e a comunidade existem
+            activities.append({
+                'type': 'comment',
+                'icon': 'fas fa-reply',
+                'color': 'info',
+                'title': f'Comentou em "{comment.post.comunidade.name}"',
+                'description': comment.text[:100] + ('...' if len(comment.text) > 100 else ''),
+                'date': comment.created_at,
+                'url': url_for('comunidade.comunidade_users', community_id=comment.post.community_id)
+            })
     
     # Adicionar likes
     for like in recent_likes:
-        activities.append({
-            'type': 'like',
-            'icon': 'fas fa-heart',
-            'color': 'danger',
-            'title': f'Curtiu post em "{like.post.comunidade.name}"',
-            'description': like.post.content[:100] + ('...' if len(like.post.content) > 100 else ''),
-            'date': like.created_at,
-            'url': url_for('comunidade.comunidade_users', community_id=like.post.community_id)
-        })
+        if like.post and like.post.comunidade:  # Verificar se o post e a comunidade existem
+            activities.append({
+                'type': 'like',
+                'icon': 'fas fa-heart',
+                'color': 'danger',
+                'title': f'Curtiu post em "{like.post.comunidade.name}"',
+                'description': like.post.content[:100] + ('...' if len(like.post.content) > 100 else ''),
+                'date': like.created_at,
+                'url': url_for('comunidade.comunidade_users', community_id=like.post.community_id)
+            })
     
     # Ordenar atividades por data (mais recente primeiro)
     activities.sort(key=lambda x: x['date'], reverse=True)
