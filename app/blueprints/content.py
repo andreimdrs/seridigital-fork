@@ -65,6 +65,7 @@ def create_content():
         title = request.form.get('title')
         description = request.form.get('description')
         content_type = request.form.get('type')
+        url = request.form.get('url')  # Link de vídeo relacionado
         thumbnail = request.form.get('thumbnail')
         release_date = request.form.get('release_date')
         
@@ -111,6 +112,7 @@ def create_content():
             title=title,
             description=description,
             type=content_type,
+            url=url,
             thumbnail=thumbnail,
             release_date=release_date_obj,
             file_path=relative_path,
@@ -169,6 +171,10 @@ def edit_content(content_id):
             
             content.file_path = f"uploads/obras/{unique_filename}"
             content.file_type = file_ext
+        
+        # Atualizar URL de vídeo relacionado
+        new_url = request.form.get('url')
+        content.url = new_url
         
         # Atualizar thumbnail
         new_thumbnail = request.form.get('thumbnail')
