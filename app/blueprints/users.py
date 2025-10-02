@@ -70,7 +70,7 @@ def profile(user_id):
             'title': f'Postou em "{post.comunidade.name}"',
             'description': post.content[:100] + ('...' if len(post.content) > 100 else ''),
             'date': post.created_at,
-            'url': url_for('comunidade.ver_comunidade', community_id=post.community_id)
+            'url': url_for('comunidade.comunidade_users', community_id=post.community_id)
         })
     
     # Adicionar comentários
@@ -82,7 +82,7 @@ def profile(user_id):
             'title': f'Comentou em "{comment.post.comunidade.name}"',
             'description': comment.text[:100] + ('...' if len(comment.text) > 100 else ''),
             'date': comment.created_at,
-            'url': url_for('comunidade.ver_comunidade', community_id=comment.post.community_id)
+            'url': url_for('comunidade.comunidade_users', community_id=comment.post.community_id)
         })
     
     # Adicionar likes
@@ -94,7 +94,7 @@ def profile(user_id):
             'title': f'Curtiu post em "{like.post.comunidade.name}"',
             'description': like.post.content[:100] + ('...' if len(like.post.content) > 100 else ''),
             'date': like.created_at,
-            'url': url_for('comunidade.ver_comunidade', community_id=like.post.community_id)
+            'url': url_for('comunidade.comunidade_users', community_id=like.post.community_id)
         })
     
     # Ordenar atividades por data (mais recente primeiro)
