@@ -42,7 +42,7 @@
             <!-- Resultados da busca -->
             {% if termo %}
                 <div class="mb-3">
-                    <h5>
+                    <h5 class="text-white">
                         {% if resultados %}
                             Resultados para "<strong>{{ termo }}</strong>" ({{ resultados|length }} obra{{ 's' if resultados|length != 1 else '' }} encontrada{{ 's' if resultados|length != 1 else '' }})
                         {% else %}
