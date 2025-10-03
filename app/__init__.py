@@ -25,6 +25,20 @@ def create_app():
     # Cria tabelas automaticamente em ambientes sem migração aplicada
     with app.app_context():
         db.create_all()
+        
+        # Aplicar todas as migrações pendentes
+        try:
+            from .migrate_on_startup import apply_all_migrations
+            apply_all_migrations(db)
+        except Exception as e:
+            print(f"⚠️  Erro ao aplicar migrações: {e}")
+        
+        # Criar conta e comunidade padrão SeriDigital
+        try:
+            from .init_default_data import create_default_account_and_community
+            create_default_account_and_community()
+        except Exception as e:
+            print(f"⚠️  Erro ao criar dados padrão: {e}")
 
     # login
     login_manager.init_app(app)

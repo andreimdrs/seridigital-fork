@@ -135,8 +135,30 @@ main {
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     transition: all 0.3s ease;
-    overflow: hidden;
+    overflow: visible;
     color: var(--color-ink);
+}
+
+/* Para cards com imagens que precisam de overflow hidden */
+.card-img-top {
+    border-radius: 15px 15px 0 0;
+}
+
+/* Garantir que dropdowns funcionem como modais e não sejam cortados */
+.dropdown-menu {
+    position: absolute !important;
+    z-index: 1050 !important;
+    will-change: transform;
+}
+
+/* Garantir que o dropdown pai tenha contexto de posicionamento */
+.dropdown {
+    position: relative;
+}
+
+.dropdown-toggle::after {
+    margin-left: 0.255em;
+    vertical-align: 0.255em;
 }
 
 .card:hover {
@@ -362,25 +384,25 @@ h2 {
 }
 
 .alert-success {
-    background: rgba(23, 162, 184, 0.1);
+    background: #ffffff;
     border-left-color: #17a2b8;
     color: #0c5460;
 }
 
 .alert-danger {
-    background: rgba(220, 53, 69, 0.1);
+    background: #ffffff;
     border-left-color: #dc3545;
     color: #721c24;
 }
 
 .alert-warning {
-    background: rgba(255, 193, 7, 0.1);
+    background: #ffffff;
     border-left-color: #ffc107;
     color: #856404;
 }
 
 .alert-info {
-    background: rgba(23, 162, 184, 0.1);
+    background: #ffffff;
     border-left-color: #17a2b8;
     color: #0c5460;
 }
@@ -541,4 +563,96 @@ h1, h2, h3, h4, h5, h6 {
 
 .thumbnail-overlay-link:hover .thumbnail-play-overlay i {
     transform: scale(1.06);
+}
+/* Play icon centralizado na thumbnail de obras */
+.obra-thumbnail-container {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    cursor: pointer;
+    overflow: hidden;
+    border-radius: 8px;
+}
+
+.obra-thumbnail-container img {
+    width: 100%;
+    height: auto;
+    display: block;
+    transition: transform 0.3s ease;
+}
+
+.obra-thumbnail-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.3);
+    transition: background 0.3s ease;
+    pointer-events: none;
+}
+
+.obra-thumbnail-container:hover .obra-thumbnail-overlay {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.obra-thumbnail-container:hover img {
+    transform: scale(1.05);
+}
+
+.obra-play-icon {
+    width: 80px;
+    height: 80px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.obra-thumbnail-container:hover .obra-play-icon {
+    background: rgba(255, 255, 255, 1);
+    transform: scale(1.15);
+}
+
+.obra-play-icon i {
+    font-size: 36px;
+    color: #dc3545;
+    margin-left: 5px;
+}
+
+/* Estilos personalizados para botões de excluir */
+.btn-danger {
+    background: #dc3545 !important;
+    color: white !important;
+    border: 2px solid #dc3545 !important;
+    box-shadow: 0 5px 15px rgba(220, 53, 69, 0.35);
+}
+
+.btn-danger:hover {
+    background: white !important;
+    color: #dc3545 !important;
+    border: 2px solid #dc3545 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(220, 53, 69, 0.5);
+}
+
+.btn-outline-danger {
+    background: #dc3545 !important;
+    color: white !important;
+    border: 2px solid #dc3545 !important;
+    box-shadow: 0 5px 15px rgba(220, 53, 69, 0.35);
+}
+
+.btn-outline-danger:hover {
+    background: white !important;
+    color: #dc3545 !important;
+    border: 2px solid #dc3545 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px rgba(220, 53, 69, 0.5);
 }

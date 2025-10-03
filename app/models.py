@@ -35,7 +35,7 @@ class Usuario(UserMixin, db.Model):
     comentarios = db.relationship('Comment', backref='user', lazy='dynamic')
     likes = db.relationship('Like', backref='user', lazy='dynamic')
     historico_assistido = db.relationship('WatchHistory', backref='user', lazy='dynamic')
-    avaliacoes = db.relationship('Rating', backref='user', lazy='dynamic')
+    avaliacoes = db.relationship('Rating', back_populates='usuario', lazy='dynamic')
 
     def __repr__(self):
         return f"<Usuario {self.email}>"
@@ -166,7 +166,7 @@ class CommunityPost(db.Model):
     created_at = db.Column('post_created_at', db.DateTime, default=datetime.utcnow, nullable=False)
 
     usuario = db.relationship('Usuario', backref='community_posts')
-    comunidade = db.relationship('Community', backref='community_posts')
+    comunidade = db.relationship('Community', back_populates='posts')
 
     # Helpers
     def likes_count(self):
@@ -198,7 +198,7 @@ class Community(db.Model):
     created_at = db.Column('com_created_at', db.DateTime, default=datetime.utcnow, nullable=False)
 
     owner = db.relationship('Usuario', backref='owned_communities')
-    posts = db.relationship('CommunityPost', backref='community', lazy='dynamic')
+    posts = db.relationship('CommunityPost', back_populates='comunidade', lazy='dynamic')
     blocks = db.relationship('CommunityBlock', backref='community', lazy='dynamic')
 
     def is_blocked(self):
@@ -257,6 +257,10 @@ class CommunityPostLike(db.Model):
     user_id = db.Column('cpl_user_id', db.Integer, db.ForeignKey('tb_users.usr_id'), nullable=False)
     post_id = db.Column('cpl_post_id', db.Integer, db.ForeignKey('tb_community_posts.post_id'), nullable=False)
     created_at = db.Column('cpl_created_at', db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relationship helpers for rendering
+    user = db.relationship('Usuario')
+    post = db.relationship('CommunityPost')
 
 class CommunityPostComment(db.Model):
     __tablename__ = 'tb_community_post_comments'
@@ -269,6 +273,7 @@ class CommunityPostComment(db.Model):
 
     # Relationship helpers for rendering
     user = db.relationship('Usuario')
+    post = db.relationship('CommunityPost')
 
 class WatchHistory(db.Model):
     __tablename__ = 'tb_watch_history'
@@ -285,8 +290,12 @@ class Rating(db.Model):
     id = db.Column('rat_id', db.Integer, primary_key=True)
     user_id = db.Column('rat_user_id', db.Integer, db.ForeignKey('tb_users.usr_id'), nullable=False)
     content_id = db.Column('rat_content_id', db.Integer, db.ForeignKey('tb_contents.cnt_id'), nullable=False)
-    rating = db.Column('rat_rating', db.Integer, nullable=False)
+    rating = db.Column('rat_rating', db.Integer, nullable=False)  # 1-5 estrelas
+    review = db.Column('rat_review', db.Text)  # Comentário opcional
     created_at = db.Column('rat_created_at', db.DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Relacionamento com usuário
+    usuario = db.relationship('Usuario', back_populates='avaliacoes', lazy=True)
 
 class Content(db.Model):
     __tablename__ = 'tb_contents'
@@ -294,10 +303,12 @@ class Content(db.Model):
     id = db.Column('cnt_id', db.Integer, primary_key=True)
     title = db.Column('cnt_title', db.String(255), nullable=False)
     description = db.Column('cnt_description', db.Text)
-    type = db.Column('cnt_type', db.String(50), nullable=False)  # ENUM substituído por String devido à falta de valores
+    type = db.Column('cnt_type', db.String(50), nullable=False)  # livro, manifesto
     release_date = db.Column('cnt_release_date', db.Date)
     thumbnail = db.Column('cnt_thumbnail', db.String(255))
     url = db.Column('cnt_url', db.String(255))
+    file_path = db.Column('cnt_file_path', db.String(500))  # caminho do arquivo PDF/EPUB
+    file_type = db.Column('cnt_file_type', db.String(10))  # pdf ou epub
     created_at = db.Column('cnt_created_at', db.DateTime, default=datetime.utcnow, nullable=False)
 
     # Relacionamentos

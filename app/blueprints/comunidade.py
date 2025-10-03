@@ -13,6 +13,20 @@ def comunidade():
     comunidades = current_user.get_accessible_communities(include_filtered=include_filtered)
     return render_template('lista_comunidades.html', comunidades=comunidades)
 
+@comunidade_bp.route('/oficial', methods=['GET'])
+@login_required
+def comunidade_oficial():
+    """Redireciona diretamente para a comunidade oficial SeriDigital"""
+    # Buscar comunidade oficial
+    comunidade_oficial = Community.query.filter_by(name='SeriDigital').first()
+    
+    if not comunidade_oficial:
+        flash('Comunidade oficial não encontrada.', 'error')
+        return redirect(url_for('comunidade.comunidade'))
+    
+    # Redirecionar para a comunidade
+    return redirect(url_for('comunidade.comunidade_users', community_id=comunidade_oficial.id))
+
 @comunidade_bp.route('/<int:community_id>', methods=['GET', 'POST'])
 @login_required
 def comunidade_users(community_id):
@@ -88,6 +102,37 @@ def criar_comunidade():
             return redirect(url_for('comunidade.comunidade_users', community_id=nova_comunidade.id))
 
     return render_template('criar_comunidade.html')
+
+@comunidade_bp.route('/delete/<int:community_id>', methods=['POST'])
+@login_required
+def delete_community(community_id):
+    """Deleta uma comunidade (apenas o criador)"""
+    comunidade = Community.query.get_or_404(community_id)
+    
+    # Verificar se o usuário atual é o dono da comunidade
+    if comunidade.owner_id != current_user.id:
+        flash('Acesso negado. Apenas o criador da comunidade pode apagá-la.', 'error')
+        return redirect(url_for('comunidade.comunidade'))
+    
+    community_name = comunidade.name
+    
+    try:
+        # Deletar todos os posts relacionados (e seus likes/comentários serão deletados em cascata)
+        CommunityPost.query.filter_by(community_id=community_id).delete()
+        
+        # Deletar todos os bloqueios relacionados à comunidade
+        CommunityBlock.query.filter_by(community_id=community_id).delete()
+        
+        # Deletar a comunidade
+        db.session.delete(comunidade)
+        db.session.commit()
+        
+        flash(f'Comunidade "{community_name}" foi apagada com sucesso.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Erro ao apagar comunidade: {str(e)}', 'error')
+    
+    return redirect(url_for('comunidade.comunidade'))
 
 # Novas rotas para bloqueio e filtragem
 @comunidade_bp.route('/block/<int:community_id>', methods=['POST'])
@@ -195,3 +240,79 @@ def admin_unfilter_community(community_id):
     
     flash(f'Comunidade "{comunidade.name}" teve o filtro removido.', 'success')
     return redirect(url_for('comunidade.comunidade'))
+
+@comunidade_bp.route('/<int:community_id>/post/<int:post_id>/delete', methods=['POST'])
+@login_required
+def delete_post(community_id, post_id):
+    """Excluir post de uma comunidade"""
+    from flask import jsonify
+    
+    post = CommunityPost.query.get_or_404(post_id)
+    comunidade = Community.query.get_or_404(community_id)
+    
+    # Verificar permissão: autor do post, admin ou dono da comunidade
+    if current_user.id != post.user_id and not current_user.is_admin and current_user.id != comunidade.owner_id:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': 'Sem permissão'}), 403
+        flash('Você não tem permissão para excluir este post.', 'danger')
+        return redirect(url_for('comunidade.comunidade_users', community_id=community_id))
+    
+    try:
+        # Deletar comentários associados
+        CommunityPostComment.query.filter_by(post_id=post_id).delete()
+        
+        # Deletar likes associados
+        CommunityPostLike.query.filter_by(post_id=post_id).delete()
+        
+        # Deletar o post
+        db.session.delete(post)
+        db.session.commit()
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': True, 'message': 'Post excluído'})
+        
+        flash('Post excluído com sucesso!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': str(e)}), 500
+        flash(f'Erro ao excluir post: {str(e)}', 'danger')
+    
+    return redirect(url_for('comunidade.ver_comunidade', community_id=community_id))
+
+@comunidade_bp.route('/comment/<int:comment_id>/delete', methods=['POST'])
+@login_required
+def delete_comment(comment_id):
+    """Excluir comentário de um post"""
+    from flask import jsonify
+    
+    comentario = CommunityPostComment.query.get_or_404(comment_id)
+    post_id = comentario.post_id
+    post = CommunityPost.query.get(post_id)
+    comunidade = Community.query.get(post.community_id) if post else None
+    
+    # Verificar permissão: autor do comentário, admin ou dono da comunidade
+    if current_user.id != comentario.user_id and not current_user.is_admin and (not comunidade or current_user.id != comunidade.owner_id):
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': 'Sem permissão'}), 403
+        flash('Você não tem permissão para excluir este comentário.', 'danger')
+        return redirect(url_for('comunidade.comunidade_users', community_id=post.community_id))
+    
+    try:
+        db.session.delete(comentario)
+        db.session.commit()
+        
+        # Contar comentários restantes
+        comments_count = CommunityPostComment.query.filter_by(post_id=post_id).count()
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': True, 'message': 'Comentário excluído', 'comments_count': comments_count})
+        
+        flash('Comentário excluído com sucesso!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify({'success': False, 'message': str(e)}), 500
+        flash(f'Erro ao excluir comentário: {str(e)}', 'danger')
+    
+    return redirect(url_for('comunidade.ver_comunidade', community_id=post.community_id))
