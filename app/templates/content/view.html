@@ -201,6 +201,12 @@
     </div>
 </div>
 
+<!-- Botão flutuante para alternar tema no reader -->
+<button id="readerThemeToggle" class="btn btn-primary reader-theme-toggle" title="Alternar tema">
+    <i class="fas fa-moon"></i>
+    <span class="visually-hidden">Alternar tema</span>
+</button>
+
 <style>
 .rating-input {
     display: flex;
@@ -234,4 +240,31 @@
     background: #f8f9fa;
 }
 </style>
+{% block extra_js %}
+<script>
+    (function(){
+        var root = document.documentElement;
+        var btn = document.getElementById('readerThemeToggle');
+        function applyIcon(){
+            if (!btn) return;
+            var isDark = root.classList.contains('theme-dark');
+            btn.innerHTML = '<i class="fas ' + (isDark ? 'fa-sun' : 'fa-moon') + '"></i><span class="visually-hidden">Alternar tema</span>';
+        }
+        function setTheme(mode){
+            if (mode === 'dark') root.classList.add('theme-dark');
+            else root.classList.remove('theme-dark');
+            try { localStorage.setItem("seridigital-theme", mode); } catch(e) {}
+            applyIcon();
+        }
+        function toggle(){
+            var isDark = root.classList.contains('theme-dark');
+            setTheme(isDark ? 'light' : 'dark');
+        }
+        if (btn){
+            btn.addEventListener('click', toggle);
+            applyIcon();
+        }
+    })();
+</script>
+{% endblock %}
 {% endblock %}
